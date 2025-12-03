@@ -1,0 +1,106 @@
+import streamlit as st
+from openai import OpenAI
+
+# --- CONFIGURATION ---
+OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
+client = OpenAI(api_key=OPENAI_API_KEY)
+
+# --- AI WRITER ---
+def generate_blog_post(topic, tone):
+    prompt = f"""
+    You are the Lead AI Growth Architect at 'Sharp Human'.
+    
+    YOUR IDENTITY:
+    You are NOT a recruiter. You are an expert in **AI Automation, Revenue Operations (RevOps), and Growth Marketing**.
+    
+    YOUR EXPERTISE:
+    You help businesses scale by replacing manual grunt work with intelligent systems:
+    1. **Automated Client Acquisition** (Meta Ads, Cold Email Infrastructure, CRM logic).
+    2. **Custom AI Agents** (Building Python bots, OpenAI wrappers, Streamlit tools).
+    3. **System Architecture** (Connecting GoHighLevel, Zapier, and APIs to remove human error).
+
+    TASK:
+    Write a high-value, authoritative 1,000-word blog post about: "{topic}"
+    Tone: {tone}
+    
+    FORMATTING RULES:
+    1. Output strictly in HTML format (use <h2>, <h3>, <p>, <ul>, <li>, <strong>).
+    2. Do NOT use <html>, <head>, or <body> tags. Start directly with the content.
+    3. Include a catchy, SEO-friendly Title in an <h1> tag at the top.
+    4. Start with a "Key Takeaways" box (use a <div style="background-color: #f0f4f8; padding: 20px; border-left: 5px solid #007bff; margin-bottom: 20px;"> container).
+    5. Use short paragraphs, bullet points, and bold text for readability.
+    
+    CONTENT RULES:
+    1. Focus strictly on **Efficiency, Scale, and ROI**.
+    2. Use technical terms correctly (e.g., APIs, Webhooks, A2P 10DLC, LLMs).
+    3. If the topic touches on hiring, frame it as "Automating the Process," not "Finding People."
+    4. ENDING: Conclude with a strong Call to Action to "Book a Growth Systems Audit" with Sharp Human.
+    """
+    
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o", 
+            messages=[{"role": "user", "content": prompt}]
+        )
+        return response.choices[0].message.content
+    except Exception as e:
+        return f"Error: {e}"
+
+def generate_seo_meta(content):
+    """Generates the Meta Description and SEO Keywords"""
+    prompt = f"""
+    Read this blog post HTML and generate:
+    1. A Meta Description (max 160 chars).
+    2. A URL Slug (e.g. ai-marketing-trends).
+    3. 5 SEO Keywords (Focus on Automation/Growth).
+    
+    BLOG CONTENT:
+    {content[:3000]}
+    """
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o-mini", 
+            messages=[{"role": "user", "content": prompt}]
+        )
+        return response.choices[0].message.content
+    except: return ""
+
+# --- UI ---
+st.set_page_config(page_title="AI Growth Blogger", page_icon="🚀", layout="wide")
+
+st.title("🚀 AI Growth & Marketing Blogger")
+st.markdown("Generate expert content on **Automation, Ad Tech, and Revenue Systems**.")
+
+with st.form("blog_form"):
+    topic = st.text_area("Blog Topic / Title", 
+        height=100,
+        placeholder="e.g. How to use AI Agents to automate lead qualification without hiring a VA.")
+    
+    tone = st.select_slider("Tone", 
+        options=["Professional & Corporate", "Direct & Bold", "Technical & Educational", "Witty & Fast-Paced"], 
+        value="Technical & Educational")
+        
+    submitted = st.form_submit_button("Generate Article")
+
+if submitted and topic:
+    with st.spinner("Architecting your content..."):
+        # 1. Write Content
+        html_content = generate_blog_post(topic, tone)
+        
+        # 2. Generate SEO Data
+        seo_data = generate_seo_meta(html_content)
+        
+        # --- DISPLAY RESULTS ---
+        st.success("Article Ready!")
+        
+        tab1, tab2, tab3 = st.tabs(["📖 Reading Mode", "COPY HTML (For GHL)", "🔍 SEO Data"])
+        
+        with tab1:
+            st.markdown(html_content, unsafe_allow_html=True)
+            
+        with tab2:
+            st.info("Step 1: Copy this code. Step 2: In GHL Blog, click the `< >` icon. Step 3: Paste.")
+            st.code(html_content, language="html")
+            
+        with tab3:
+            st.write(seo_data)
